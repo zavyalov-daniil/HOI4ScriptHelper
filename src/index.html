@@ -1,14 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Electron App</title>
+    <title>Electron Test</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
 </head>
 
 <body>
-    <h1>Welcome to My Electron App</h1>
+<input type="button" id="button" value="Open File Dialog">
+
+<ul id="paths"></ul>
 </body>
 
+<script>
+    document.getElementById('button').addEventListener('click', () => {
+        window.ipcRender.invoke('openFileDialog')
+            .then((paths) => {
+                if (paths === undefined) { return } // Dialog was cancelled
+
+                let result = '';
+
+                for (let path of paths) {
+                    result += '<li>' + path + '</li>';
+                }
+
+                document.getElementById('paths').innerHTML = result;
+            })
+    })
+</script>
 </html>
