@@ -1,31 +1,126 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
+    <title>Our Code World</title>
     <meta charset="UTF-8">
-    <title>Electron Test</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
 <body>
-<input type="button" id="button" value="Open File Dialog">
-
-<ul id="paths"></ul>
-</body>
-
+<div>
+    <div style="text-align:center;">
+        <input type="text" placeholder="Please select a file" id="actual-file" disabled="disabled"/>
+        <input type="button" value="Choose a file" id="select-file"/>
+    </div>
+    <br><br>
+    <textarea id="content-editor" rows="5"></textarea><br><br>
+    <input type="button" id="save-changes" value="Save changes"/>
+    <input type="button" id="delete-file" value="Delete file"/>
+</div>
+<hr>
+<div style="text-align:center;">
+    <p>
+        The file content will be the same as the editor.
+    </p>
+    <input type="button" value="Choose a file" id="create-new-file"/>
+</div>
 <script>
-    document.getElementById('button').addEventListener('click', () => {
-        window.ipcRender.invoke('openFileDialog')
-            .then((paths) => {
-                if (paths === undefined) { return } // Dialog was cancelled
+    const remote = require('@electron/remote');
+    const { dialog } = remote;
+    const fs = require('fs');
 
-                let result = '';
+    document.getElementById('select-file').addEventListener('click',function(){
+        dialog.showOpenDialog({
+            properties: ['openFile']
+        }).then(result => {
+            if(result === undefined){
+                console.log("No file selected");
+            }else{
+                document.getElementById("actual-file").value = result.filePaths[0];
+                readFile(result.filePaths[0]);
+            }
+        });
+    },false);
 
-                for (let path of paths) {
-                    result += '<li>' + path + '</li>';
+    document.getElementById('save-changes').addEventListener('click',function(){
+        var actualFilePath = document.getElementById("actual-file").value;
+
+        if(actualFilePath){
+            saveChanges(actualFilePath,document.getElementById('content-editor').value);
+        }else{
+            alert("Please select a file first");
+        }
+    },false);
+
+    document.getElementById('delete-file').addEventListener('click',function(){
+        var actualFilePath = document.getElementById("actual-file").value;
+
+        if(actualFilePath){
+            deleteFile(actualFilePath);
+            document.getElementById("actual-file").value = "";
+            document.getElementById("content-editor").value = "";
+        }else{
+            alert("Please select a file first");
+        }
+    },false);
+
+    document.getElementById('create-new-file').addEventListener('click',function(){
+        var content = document.getElementById("content-editor").value;
+
+        dialog.showSaveDialog(function (fileName) {
+            if (fileName === undefined){
+                console.log("You didn't save the file");
+                return;
+            }
+
+            fs.writeFile(fileName, content, function (err) {
+                if(err){
+                    alert("An error ocurred creating the file "+ err.message)
                 }
 
-                document.getElementById('paths').innerHTML = result;
-            })
-    })
+                alert("The file has been succesfully saved");
+            });
+        });
+    },false);
+
+    function readFile(filepath) {
+        fs.readFile(filepath, 'utf-8', function (err, data) {
+            if(err){
+                alert("An error ocurred reading the file :" + err.message);
+                return;
+            }
+
+            document.getElementById("content-editor").value = data;
+        });
+    }
+
+    function deleteFile(filepath){
+        fs.exists(filepath, function(exists) {
+            if(exists) {
+                // File exists deletings
+                fs.unlink(filepath,function(err){
+                    if(err){
+                        alert("An error ocurred updating the file"+ err.message);
+                        console.log(err);
+                        return;
+                    }
+                });
+            } else {
+                alert("This file doesn't exist, cannot delete");
+            }
+        });
+    }
+
+    function saveChanges(filepath,content){
+        fs.writeFile(filepath, content, function (err) {
+            if(err){
+                alert("An error ocurred updating the file"+ err.message);
+                console.log(err);
+                return;
+            }
+
+            alert("The file has been succesfully saved");
+        });
+    }
 </script>
+</body>
 </html>
